@@ -4,12 +4,27 @@ import { View, Text, StyleSheet } from "react-native";
 export default function OrgStructureScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>About Us - Organizational Structure</Text>
+      <Text style={styles.title}>Organizational Structure</Text>
+      <Text style={styles.content}>
+        Meet our team dedicated to Gender and Development.
+      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", alignItems: "center" },
-  title: { fontSize: 22, fontWeight: "bold" },
+  container: {
+    flex: 1,
+    backgroundColor: "#f3e8ff",
+    padding: 24,
+    justifyContent: "center",
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: "bold",
+    color: "#6d28d9",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  content: { fontSize: 18, color: "#a78bfa", textAlign: "center" },
 });

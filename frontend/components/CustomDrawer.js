@@ -38,10 +38,10 @@ export default function CustomDrawer({ navigation }) {
       {policiesOpen && (
         <View style={styles.subMenu}>
           <Text style={styles.subHeader}>Policies</Text>
-          <TouchableOpacity onPress={() => navigation.navigate("Circulars")}><Text>- Circulars</Text></TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate("Resolutions")}><Text>- Resolutions</Text></TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate("Memoranda")}><Text>- Memoranda</Text></TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate("Office Orders")}><Text>- Office Orders</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate("Circulars")}><Text>Circulars</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate("Resolutions")}><Text>Resolutions</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate("Memoranda")}><Text>Memoranda</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate("Office Orders")}><Text>Office Orders</Text></TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate("Reports")}><Text>Reports</Text></TouchableOpacity>
         </View>
       )}
