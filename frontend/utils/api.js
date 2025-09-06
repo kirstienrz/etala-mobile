@@ -34,5 +34,15 @@ export const getProfile = async () => {
   return await api.get("/api/auth/profile"); // ✅ correct route
 };
 
+// 🆕 Chatbot request (Gemini-powered)
+export const askChatbot = async (message) => {
+  try {
+    const response = await api.post("/api/chatbot", { message });
+    return response.data; // { reply: "... from Gemini ..." }
+  } catch (error) {
+    console.error("Chatbot API error:", error);
+    throw error;
+  }
+};
 
 export default api;
