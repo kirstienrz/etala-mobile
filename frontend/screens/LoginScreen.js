@@ -14,8 +14,9 @@ import {
   ScrollView,
   Dimensions,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { loginUser } from "../utils/api";
+import { useDispatch, useSelector } from "react-redux";
+import { loginUser as loginUserAPI } from "../utils/api";
+import { loginUser } from "../redux/authSlice";
 import { useNavigation } from "@react-navigation/native";
 
 const { width, height } = Dimensions.get('window');
@@ -25,80 +26,76 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
+
+  const dispatch = useDispatch();
   const navigation = useNavigation();
+  const { user, token } = useSelector((state) => state.auth);
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!form.email) {
       newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(form.email)) {
       newErrors.email = "Please enter a valid email address";
     }
-    
+
     if (!form.password) {
       newErrors.password = "Password is required";
     } else if (form.password.length < 6) {
       newErrors.password = "Password must be at least 6 characters long";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleChange = (key, value) => {
     setForm({ ...form, [key]: value });
-    // Clear error when user starts typing
     if (errors[key]) {
       setErrors({ ...errors, [key]: null });
     }
   };
 
   const handleLogin = async () => {
+    if (!validateForm()) return;
+
     setLoading(true);
     try {
-      const res = await loginUser(form);
+      const res = await loginUserAPI(form);
 
       if (res.data.token) {
-        await AsyncStorage.setItem("token", res.data.token);
-        await AsyncStorage.setItem("user", JSON.stringify(res.data.user));
+        await dispatch(loginUser({
+          user: res.data.user,
+          token: res.data.token
+        }));
+
         Alert.alert(
-          "Welcome Back!", 
+          "Welcome Back!",
           `Hello ${res.data.user.firstName}! You're successfully logged in.`,
           [
             {
               text: "Continue",
               style: "default",
+              onPress: () => navigation.navigate("Private")
             }
           ]
         );
-        // Navigate to main app or dashboard
-        // navigation.replace("Dashboard");
       } else {
         Alert.alert(
-          "Login Failed", 
+          "Login Failed",
           res.data.message || "Invalid credentials. Please check your email and password.",
-          [
-            {
-              text: "Try Again",
-              style: "cancel",
-            }
-          ]
+          [{ text: "Try Again", style: "cancel" }]
         );
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 
-                          error.message || 
-                          "Unable to connect to server. Please check your internet connection.";
+      const errorMessage = error.response?.data?.message ||
+        error.message ||
+        "Unable to connect to server. Please check your internet connection.";
       Alert.alert(
-        "Login Error", 
+        "Login Error",
         errorMessage,
-        [
-          {
-            text: "OK",
-            style: "cancel",
-          }
-        ]
+        [{ text: "OK", style: "cancel" }]
       );
     } finally {
       setLoading(false);
@@ -110,34 +107,22 @@ export default function LoginScreen() {
       "Reset Password",
       "Would you like to reset your password? We'll send instructions to your email.",
       [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
+        { text: "Cancel", style: "cancel" },
         {
           text: "Send Reset Link",
-          onPress: () => {
-            // navigation.navigate("ForgotPassword");
-            Alert.alert("Feature Coming Soon", "Password reset functionality will be available soon.");
-          }
+          onPress: () => Alert.alert("Feature Coming Soon", "Password reset functionality will be available soon.")
         }
       ]
     );
   };
 
-
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardContainer}
-      >
-        <ScrollView 
-          contentContainerStyle={styles.scrollContainer}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled" // Fix: Allow taps when keyboard is open
-        >
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardContainer}>
+        <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <View style={styles.container}>
+            <View style={styles.spacer} />
+            
             {/* Header Section */}
             <View style={styles.header}>
               <View style={styles.logoContainer}>
@@ -163,11 +148,9 @@ export default function LoginScreen() {
                   value={form.email}
                   onChangeText={(v) => handleChange("email", v)}
                   placeholderTextColor="#9CA3AF"
-                  returnKeyType="next" // Better UX
+                  returnKeyType="next"
                 />
-                {errors.email && (
-                  <Text style={styles.errorText}>{errors.email}</Text>
-                )}
+                {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
               </View>
 
               {/* Password Input */}
@@ -181,43 +164,33 @@ export default function LoginScreen() {
                     value={form.password}
                     onChangeText={(v) => handleChange("password", v)}
                     placeholderTextColor="#9CA3AF"
-                    returnKeyType="done" // Better UX
-                    onSubmitEditing={handleLogin} // Allow enter to submit
+                    returnKeyType="done"
+                    onSubmitEditing={handleLogin}
                   />
                   <TouchableOpacity
                     style={styles.passwordToggle}
                     onPress={() => setShowPassword(!showPassword)}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} // Increase touch area
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
                     <Text style={styles.passwordToggleText}>
                       {showPassword ? "Hide" : "Show"}
                     </Text>
                   </TouchableOpacity>
                 </View>
-                {errors.password && (
-                  <Text style={styles.errorText}>{errors.password}</Text>
-                )}
+                {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
               </View>
 
               {/* Forgot Password Link */}
-              <TouchableOpacity 
-                style={styles.forgotPasswordContainer}
-                onPress={handleForgotPassword}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} // Increase touch area
-              >
+              <TouchableOpacity style={styles.forgotPasswordContainer} onPress={handleForgotPassword}>
                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
               </TouchableOpacity>
 
               {/* Login Button */}
               <TouchableOpacity
-                style={[
-                  styles.loginButton, 
-                  loading && styles.loginButtonDisabled
-                ]}
+                style={[styles.loginButton, loading && styles.loginButtonDisabled]}
                 onPress={handleLogin}
                 disabled={loading}
                 activeOpacity={0.8}
-                hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }} // Increase touch area
               >
                 <Text style={styles.loginButtonText}>
                   {loading ? "Signing In..." : "Sign In"}
@@ -250,6 +223,8 @@ export default function LoginScreen() {
                 By signing in, you agree to our Terms of Service and Privacy Policy
               </Text>
             </View>
+            
+            <View style={styles.spacer} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -258,209 +233,39 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  keyboardContainer: {
-    flex: 1,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    minHeight: height * 0.9,
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: 24,
-    backgroundColor: "#FFFFFF",
-  },
-  header: {
-    alignItems: "center",
-    paddingTop: 40,
-    paddingBottom: 32,
-  },
-  logoContainer: {
-    marginBottom: 24,
-  },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#8B5CF6",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#8B5CF6",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  logoText: {
-    color: "#FFFFFF",
-    fontSize: 24,
-    fontWeight: "bold",
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#1F2937",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#6B7280",
-    textAlign: "center",
-    fontWeight: "400",
-  },
-  formContainer: {
-    flex: 1,
-    paddingTop: 16,
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#374151",
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 2,
-    borderColor: "#E5E7EB",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: "#F9FAFB",
-    fontSize: 16,
-    color: "#1F2937",
-    fontWeight: "400",
-  },
-  inputError: {
-    borderColor: "#EF4444",
-    backgroundColor: "#FEF2F2",
-  },
-  passwordContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#E5E7EB",
-    borderRadius: 12,
-    backgroundColor: "#F9FAFB",
-  },
-  passwordInput: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: "#1F2937",
-    fontWeight: "400",
-  },
-  passwordToggle: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  passwordToggleText: {
-    color: "#3B82F6",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  errorText: {
-    color: "#EF4444",
-    fontSize: 12,
-    marginTop: 4,
-    fontWeight: "500",
-  },
-  forgotPasswordContainer: {
-    alignSelf: "flex-end",
-    marginBottom: 24,
-  },
-  forgotPasswordText: {
-    color: "#3B82F6",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  loginButton: {
-    backgroundColor: "#8B5CF6",
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    shadowColor: "#8B5CF6",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-    marginBottom: 24,
-  },
-  loginButtonDisabled: {
-    backgroundColor: "#D1D5DB",
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  loginButtonText: {
-    color: "#FFFFFF",
-    fontSize: 18,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  dividerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#E5E7EB",
-  },
-  dividerText: {
-    paddingHorizontal: 16,
-    color: "#9CA3AF",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  signupContainer: {
-    alignItems: "center",
-    marginBottom: 32,
-  },
-  signupPrompt: {
-    color: "#6B7280",
-    fontSize: 16,
-    marginBottom: 12,
-    fontWeight: "400",
-  },
-  signupButton: {
-    borderWidth: 2,
-    borderColor: "#3B82F6",
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    backgroundColor: "#FFFFFF",
-    minWidth: 200,
-    alignItems: "center",
-  },
-  signupButtonText: {
-    color: "#3B82F6",
-    fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  footer: {
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  footerText: {
-    color: "#9CA3AF",
-    fontSize: 12,
-    textAlign: "center",
-    lineHeight: 18,
-    paddingHorizontal: 20,
-  },
+  safeArea: { flex: 1, backgroundColor: "#FFFFFF" },
+  keyboardContainer: { flex: 1 },
+  scrollContainer: { flexGrow: 1, justifyContent: 'center', minHeight: height * 0.9 },
+  container: { flex: 1, paddingHorizontal: 24, backgroundColor: "#FFFFFF" },
+  spacer: { flex: 0.5 },
+  header: { alignItems: "center", paddingVertical: 20 },
+  logoContainer: { marginBottom: 20 },
+  logoCircle: { width: 70, height: 70, borderRadius: 35, backgroundColor: "#8B5CF6", alignItems: "center", justifyContent: "center", shadowColor: "#8B5CF6", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 6, elevation: 5 },
+  logoText: { color: "#FFFFFF", fontSize: 20, fontWeight: "bold" },
+  title: { fontSize: 28, fontWeight: "700", color: "#1F2937", marginBottom: 6, textAlign: "center" },
+  subtitle: { fontSize: 15, color: "#6B7280", textAlign: "center", fontWeight: "400" },
+  formContainer: { paddingTop: 16 },
+  inputContainer: { marginBottom: 18 },
+  inputLabel: { fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 6 },
+  input: { borderWidth: 1.5, borderColor: "#E5E7EB", paddingHorizontal: 14, paddingVertical: 12, borderRadius: 10, backgroundColor: "#F9FAFB", fontSize: 15, color: "#1F2937", fontWeight: "400" },
+  inputError: { borderColor: "#EF4444", backgroundColor: "#FEF2F2" },
+  passwordContainer: { flexDirection: "row", alignItems: "center", borderWidth: 1.5, borderColor: "#E5E7EB", borderRadius: 10, backgroundColor: "#F9FAFB" },
+  passwordInput: { flex: 1, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: "#1F2937", fontWeight: "400" },
+  passwordToggle: { paddingHorizontal: 14, paddingVertical: 12 },
+  passwordToggleText: { color: "#3B82F6", fontSize: 13, fontWeight: "600" },
+  errorText: { color: "#EF4444", fontSize: 11, marginTop: 3, fontWeight: "500" },
+  forgotPasswordContainer: { alignSelf: "flex-end", marginBottom: 20 },
+  forgotPasswordText: { color: "#3B82F6", fontSize: 13, fontWeight: "600" },
+  loginButton: { backgroundColor: "#8B5CF6", paddingVertical: 14, borderRadius: 10, alignItems: "center", shadowColor: "#8B5CF6", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 6, elevation: 5, marginBottom: 20 },
+  loginButtonDisabled: { backgroundColor: "#D1D5DB", shadowOpacity: 0, elevation: 0 },
+  loginButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700", letterSpacing: 0.3 },
+  dividerContainer: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: "#E5E7EB" },
+  dividerText: { paddingHorizontal: 14, color: "#9CA3AF", fontSize: 13, fontWeight: "500" },
+  signupContainer: { alignItems: "center", marginBottom: 20 },
+  signupPrompt: { color: "#6B7280", fontSize: 15, marginBottom: 10, fontWeight: "400" },
+  signupButton: { borderWidth: 1.5, borderColor: "#3B82F6", paddingVertical: 12, paddingHorizontal: 28, borderRadius: 10, backgroundColor: "#FFFFFF", minWidth: 180, alignItems: "center" },
+  signupButtonText: { color: "#3B82F6", fontSize: 15, fontWeight: "700", letterSpacing: 0.3 },
+  footer: { paddingVertical: 12, alignItems: "center" },
+  footerText: { color: "#9CA3AF", fontSize: 11, textAlign: "center", lineHeight: 16, paddingHorizontal: 16 },
 });

@@ -7,6 +7,10 @@ const UserSchema = new mongoose.Schema({
   lastName: { type: String, required: true },
   birthday: { type: Date, required: true },
   password: { type: String, required: true }, // hashed
+  avatar: {
+      public_id: { type: String },
+      url: { type: String },
+    },
 });
 
 module.exports = mongoose.model("User", UserSchema);
